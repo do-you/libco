@@ -76,62 +76,70 @@ enum
 //hig | regs[13]: rsp |
 enum
 {
-	kRDI = 7,
-	kRSI = 8,
-	kRETAddr = 9,
-	kRSP = 13,
+    kRDI = 7,
+    kRSI = 8,
+    kRETAddr = 9,
+    kRDX = 10,
+    kRCX = 11,
+    kRSP = 13,
 };
 
 //64 bit
 extern "C"
 {
-	extern void coctx_swap( coctx_t *,coctx_t* ) asm("coctx_swap");
+extern void coctx_swap(coctx_t *, coctx_t *) asm("coctx_swap");
 };
 #if defined(__i386__)
 int coctx_init( coctx_t *ctx )
 {
-	memset( ctx,0,sizeof(*ctx));
-	return 0;
+    memset( ctx,0,sizeof(*ctx));
+    return 0;
 }
 int coctx_make( coctx_t *ctx,coctx_pfn_t pfn,const void *s,const void *s1 )
 {
-	//make room for coctx_param
-	char *sp = ctx->ss_sp + ctx->ss_size - sizeof(coctx_param_t);
-	sp = (char*)((unsigned long)sp & -16L);
+    //make room for coctx_param
+    char *sp = ctx->ss_sp + ctx->ss_size - sizeof(coctx_param_t);
+    sp = (char*)((unsigned long)sp & -16L);
 
-	
-	coctx_param_t* param = (coctx_param_t*)sp ;
-	param->s1 = s;
-	param->s2 = s1;
 
-	memset(ctx->regs, 0, sizeof(ctx->regs));
+    coctx_param_t* param = (coctx_param_t*)sp ;
+    param->s1 = s;
+    param->s2 = s1;
 
-	ctx->regs[ kESP ] = (char*)(sp) - sizeof(void*);
-	ctx->regs[ kEIP ] = (char*)pfn;
+    memset(ctx->regs, 0, sizeof(ctx->regs));
 
-	return 0;
+    ctx->regs[ kESP ] = (char*)(sp) - sizeof(void*);
+    ctx->regs[ kEIP ] = (char*)pfn;
+
+    return 0;
 }
 #elif defined(__x86_64__)
-int coctx_make( coctx_t *ctx,coctx_pfn_t pfn,const void *s,const void *s1 )
+
+int coctx_make(coctx_t *ctx, coctx_pfn_t pfn, const void *s, const void *s1)
 {
-	char *sp = ctx->ss_sp + ctx->ss_size;
-	sp = (char*) ((unsigned long)sp & -16LL  );
+    char *sp = ctx->ss_sp + ctx->ss_size;
+    sp = (char *) ((size_t) sp & -16LL);
 
-	memset(ctx->regs, 0, sizeof(ctx->regs));
+    memset(ctx->regs, 0, sizeof(ctx->regs));
 
-	ctx->regs[ kRSP ] = sp - 8;
+    ctx->regs[kRSP] = sp - 8;
 
-	ctx->regs[ kRETAddr] = (char*)pfn;
+    ctx->regs[kRETAddr] = (char *) pfn;
 
-	ctx->regs[ kRDI ] = (char*)s;
-	ctx->regs[ kRSI ] = (char*)s1;
-	return 0;
+#ifdef WIN32
+    ctx->regs[kRCX] = (char *) s;
+    ctx->regs[kRDX] = (char *) s1;
+#else
+    ctx->regs[kRDI] = (char *) s;
+    ctx->regs[kRSI] = (char *) s1;
+#endif
+    return 0;
 }
 
-int coctx_init( coctx_t *ctx )
+int coctx_init(coctx_t *ctx)
 {
-	memset( ctx,0,sizeof(*ctx));
-	return 0;
+    memset(ctx, 0, sizeof(*ctx));
+    return 0;
 }
 
 #endif

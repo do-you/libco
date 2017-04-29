@@ -18,7 +18,7 @@
 
 .globl coctx_swap
 #if !defined( __APPLE__ )
-.type  coctx_swap, @function
+#.type  coctx_swap, @function
 #endif
 coctx_swap:
 
@@ -54,26 +54,35 @@ coctx_swap:
 	ret
 
 #elif defined(__x86_64__)
-	leaq 8(%rsp),%rax
-	leaq 112(%rdi),%rsp
-	pushq %rax
-	pushq %rbx
-	pushq %rcx
-	pushq %rdx
+	leaq 8(%rsp),%rax //令rax的值为call coctx_swap前rsp的值
 
-	pushq -8(%rax) //ret func addr
+#ifdef WIN32
+    leaq 112(%rcx),%rsp//第一个参数的ss_size的地址
+#else
+	leaq 112(%rdi),%rsp//第一个参数的ss_size的地址
+#endif
+	pushq %rax//压入regs[13]
+	pushq %rbx//压入regs[12]
+	pushq %rcx//压入regs[11]
+	pushq %rdx//压入regs[10]
 
-	pushq %rsi
-	pushq %rdi
-	pushq %rbp
-	pushq %r8
-	pushq %r9
-	pushq %r12
-	pushq %r13
-	pushq %r14
-	pushq %r15
-	
-	movq %rsi, %rsp
+	pushq -8(%rax) //ret func addr压入regs[9]
+
+	pushq %rsi//压入regs[8]
+	pushq %rdi//压入regs[7]
+	pushq %rbp//压入regs[6]
+	pushq %r8//压入regs[5]
+	pushq %r9//压入regs[4]
+	pushq %r12//压入regs[3]
+	pushq %r13//压入regs[2]
+	pushq %r14//压入regs[1]
+	pushq %r15//压入regs[0]
+
+#ifdef WIN32
+    movq %rdx, %rsp//第二个参数的首地址,以下时依次取出
+#else
+    movq %rsi, %rsp//第二个参数的首地址,以下时依次取出
+#endif
 	popq %r15
 	popq %r14
 	popq %r13
@@ -88,7 +97,8 @@ coctx_swap:
 	popq %rcx
 	popq %rbx
 	popq %rsp
-	pushq %rax
+
+	pushq %rax//
 	
 	xorl %eax, %eax
 	ret
